@@ -13,28 +13,29 @@ def main():
     if len(sys.argv) < 2:
         raise ValueError("Error! Enter an argument")
     
-    directory, filename = os.path.split(sys.argv[1])
+    directory, filename = os.path.split(os.path.normpath(sys.argv[1]))
+    directory = os.path.join(os.path.dirname(__file__), directory)
     parser = ps.Parser(sys.argv[1])
-    outputFileName = f"{os.path.splitext(filename)}.hack"
+    outputFileName = f"{os.path.splitext(filename)[0]}.hack"
     outputFile = os.path.join(directory, outputFileName)
     
     with open(outputFile, 'w') as file:
-        while parser.has_more_commands():
-            try:
-                parser.advance()
-            
-                output = 24576
-                if parser.commandType == "C_COMMAND":
-                    output += 32768
-                    output += Code.comp(parser.comp())
-                    output += Code.dest(parser.dest())
-                    output += Code.jump(parser.jump())
-                else:
-                    output += int(parser.symbol())
-                    
-                file.write(output + "\n")
-            except:
-                print("reached EOF")
+            while parser.has_more_commands():
+                try:
+                    parser.advance()
+                
+                    output = 24576
+                    if parser.command_type == "C_COMMAND":
+                        output += 32768
+                        output += Code.comp(parser.comp())
+                        output += Code.dest(parser.dest())
+                        output += Code.jump(parser.jump())
+                    else:
+                        output += int(parser.symbol())
+                        
+                    file.write(output + "\n")
+                except:
+                    print("reached EOF")
         
         
 
