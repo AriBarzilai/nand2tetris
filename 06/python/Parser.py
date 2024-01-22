@@ -34,17 +34,15 @@ class Parser:
         Returns:
             _str_: The current command.
         """
-        if self.has_more_commands:
+        while self.has_more_commands:
             temp_str = self.file.readline()
             remove_whitespace = re.sub(r'\s+', '', temp_str)
-            comment_index = temp_str.find('//') # looks for inline comments
+            comment_index = temp_str.find('//')  # looks for inline comments
             if comment_index != -1:
                 remove_whitespace = remove_whitespace[0:comment_index]
-            print(temp_str + remove_whitespace)
             if remove_whitespace == '':
-                self.advance()
+                continue
             self.current_line = remove_whitespace
-            
 
             if '@' in self.current_line:
                 self.set_command_type("A_COMMAND")
@@ -52,6 +50,9 @@ class Parser:
                 self.set_command_type("L_COMMAND")
             if '=' in self.current_line or ';' in self.current_line:
                 self.set_command_type("C_COMMAND")
+                
+            break  # Exit the loop after processing the current line
+
     
     def symbol(self):
         """Returns the symbol or decimal Xxx of the current command @Xxx or (Xxx).
