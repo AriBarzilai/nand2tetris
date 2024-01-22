@@ -55,3 +55,14 @@ def jump(mnemonic):
     mnemonic (str): The mnemonic string whose binary code is to be returned.
     """
     return _jump_codes.get(mnemonic)
+
+def symbol(num):
+    """
+    Summary:
+    Returns the 16-bit binary code of the symbol.
+    You should use this only on the symbol obtained from the symbol() method of the Parser class.
+
+    Args:
+    num (int): The number whose binary code is to be returned.
+    """
+    return bin(num)[2:].zfill(16)

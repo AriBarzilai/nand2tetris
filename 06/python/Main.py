@@ -24,31 +24,34 @@ def main():
     with open(outputFile, 'w') as file:
             while parser.has_more_commands():
                     parser.advance()
-                    output = "11"
+                    output = "111"
                     try:
                         if parser.command_type == "C_COMMAND":
-                            output += "1"
                             output += Code.comp(parser.comp())
                             output += Code.dest(parser.dest())
                             output += Code.jump(parser.jump())
                         else:
-                            output += "0"                    
+                            output = Code.symbol(parser.symbol())                  
                         file.write(output + "\n")
                     except:
                         pass
-                    template = "{:<5} | {:<8} | dest {:<6} comp {:<6} jump {:<6} symbol {:<5} code {:<16} | {:<7} {:3} {:3}"
-                    print(template.format(
-                        parser.current_line if parser.current_line is not None else "None",
-                        parser.command_type if parser.command_type is not None else "None",
-                        parser.dest() if parser.dest() is not None else "None",
-                        parser.comp() if parser.comp() is not None else "None",
-                        parser.jump() if parser.jump() is not None else "None",
-                        parser.symbol() if parser.symbol() is not None else "None",
-                        output,
-                        Code.comp(parser.comp()),
-                        Code.dest(parser.dest()),
-                        Code.jump(parser.jump())
-                    ))
+                    debug(parser, output)
+
+
+def debug(parser, output):
+    template = "{:<5} | {:<8} | dest {:<6} comp {:<6} jump {:<6} symbol {:<5} code {:<16} | {:<7} {:3} {:3}"
+    print(template.format(
+        parser.current_line if parser.current_line is not None else "None",
+        parser.command_type if parser.command_type is not None else "None",
+        parser.dest() if parser.dest() is not None else "None",
+        parser.comp() if parser.comp() is not None else "None",
+        parser.jump() if parser.jump() is not None else "None",
+        parser.symbol() if parser.symbol() is not None else "None",
+        output if parser.command_type == "C_COMMAND" else Code.symbol(parser.symbol()),
+        Code.comp(parser.comp()),
+        Code.dest(parser.dest()),
+        Code.jump(parser.jump())
+    ))
 
 if __name__ == '__main__':
     main()

@@ -62,7 +62,7 @@ class Parser:
         """
         if self.command_type == "A_COMMAND":
             try:
-                return bin(int(self.current_line[1:]))[2:]
+                return int(self.current_line[1:])
             except:
                 return 'None'
         elif self.command_type == "L_COMMAND":
