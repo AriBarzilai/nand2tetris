@@ -1,4 +1,3 @@
-import os
 import re
 
 class Parser:
@@ -7,9 +6,8 @@ class Parser:
     command_type = None
 
 
-    def __init__(self, fileName):
-        curr_dir = os.path.dirname(__file__)
-        self.file = open(os.path.join(curr_dir, fileName), 'r')
+    def __init__(self, filePath):
+        self.file = open(filePath, 'r')
         
     def has_more_commands(self):
         """ Checks if there are more commands in the input.
@@ -39,16 +37,15 @@ class Parser:
         if self.has_more_commands:
             temp_str = self.file.readline()
             remove_whitespace = re.sub(r'\s+', '', temp_str)
-            comment_index = temp_str.find('//')
+            comment_index = temp_str.find('//') # looks for inline comments
             if comment_index != -1:
                 remove_whitespace = remove_whitespace[0:comment_index]
+            print(temp_str + remove_whitespace)
             if remove_whitespace == '':
                 self.advance()
             self.current_line = remove_whitespace
-
-            if self.current_line == '':
-                return None
             
+
             if '@' in self.current_line:
                 self.set_command_type("A_COMMAND")
             if '(' in self.current_line and ')' in self.current_line:
@@ -63,7 +60,10 @@ class Parser:
             _str_: The symbol or decimal Xxx of the current command.
         """
         if self.command_type == "A_COMMAND":
-            return self.current_line[1:]
+            try:
+                return bin(int(self.current_line[1:]))[2:]
+            except:
+                return 'None'
         elif self.command_type == "L_COMMAND":
             return self.current_line[1:len(self.current_line)-1]
         
@@ -88,12 +88,10 @@ class Parser:
             semicolon_index = self.current_line.find(";")
             equals_index = self.current_line.find("=")
             
-            if equals_index == -1:
-                equals_index = 0
             if semicolon_index == -1:
                 semicolon_index = len(self.current_line)
         
-            return self.current_line[equals_index:semicolon_index]
+            return self.current_line[equals_index+1:semicolon_index]
                 
     def jump(self):
         """Returns the jump mnemonic in the current C-command (8 possibilities).
