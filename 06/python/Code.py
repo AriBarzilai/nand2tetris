@@ -67,4 +67,4 @@ def symbol(num):
     Args:
     num (int): The number whose binary code is to be returned.
     """
-    return bin(num)[2:].zfill(16)
+    return bin(num)[2:].zfill(16) if num is not None else None

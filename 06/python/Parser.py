@@ -1,4 +1,5 @@
 import re
+import SymbolTable as st
 
 class Parser:
     file = None
@@ -37,9 +38,9 @@ class Parser:
         while self.has_more_commands:
             temp_str = self.file.readline()
             remove_whitespace = re.sub(r'\s+', '', temp_str)
-            comment_index = temp_str.find('//')  # looks for inline comments
+            comment_index = remove_whitespace.find('//')  # looks for inline comments
             if comment_index != -1:
-                remove_whitespace = remove_whitespace[0:comment_index]
+                remove_whitespace = remove_whitespace[:comment_index]
             if remove_whitespace == '':
                 continue
             self.current_line = remove_whitespace
@@ -54,19 +55,20 @@ class Parser:
             break  # Exit the loop after processing the current line
 
     
-    def symbol(self):
+    def symbol(self, symbol_table):
         """Returns the symbol or decimal Xxx of the current command @Xxx or (Xxx).
 
         Returns:
             _str_: The symbol or decimal Xxx of the current command.
         """
         if self.command_type == "A_COMMAND":
+            symbol = self.current_line[1:]
             try:
-                return int(self.current_line[1:])
+                return int(symbol)
             except:
-                return 'None'
+                return symbol_table.get_address(symbol)
         elif self.command_type == "L_COMMAND":
-            return self.current_line[1:len(self.current_line)-1]
+            return self.current_line[1:-1]
         
     def dest(self):
         """Returns the dest mnemonic in the current C-command (8 possibilities).
@@ -105,6 +107,10 @@ class Parser:
             if semicolon_index != -1 and semicolon_index != len(self.current_line)-1:
                 return self.current_line[semicolon_index+1:]
                 
+    def reset(self):
+        self.file.seek(0)
+        self.current_line = None
+        self.command_type = None
             
             
         

@@ -1,5 +1,6 @@
 import Code
 import Parser as ps
+import SymbolTable as st
 import os
 import sys
 
@@ -10,56 +11,61 @@ def main():
         raise ValueError("Error! Enter a path to a file or a directory as an argument.")
     
     path = os.path.normpath(sys.argv[1])
+    path = os.path.abspath(path)
     
     if os.path.isdir(path):
+        print("assembling the files in {}".format(path))
         for file in os.listdir(path):
             if file.endswith(".asm"):
                 assembleFile(os.path.join(path, file))
     else:
         assembleFile(path)
 
-def assembleFile(filePath):
-    """Takes in a file name as an argument and outputs a .hack file with the same name as the input file.
+def assembleFile(file_path):
+    """Takes in a normalized file name as an argument and outputs a .hack file with the same name as the input file.
 
     Raises:
         ValueError: If no argument is given.
     """
     
-    directory, filename = os.path.split(filePath)
-    directory = os.path.join(os.path.dirname(__file__), directory)
-    parser = ps.Parser(os.path.join(directory, filename))
-    outputFileName = f"{os.path.splitext(filename)[0]}.hack"
-    outputFile = os.path.join(directory, outputFileName)
+    directory, file_name = os.path.split(file_path)
+    parser = ps.Parser(file_path)
+    output_file_name = f"{os.path.splitext(file_name)[0]}.hack"
+    output_file = os.path.join(directory, output_file_name)
     
-    with open(outputFile, 'w') as file:
-            print(f"Assembling {filename}...")
-            while parser.has_more_commands():
-                    parser.advance()
-                    output = "111"
-                    try:
-                        if parser.command_type == "C_COMMAND":
-                            output += Code.comp(parser.comp())
-                            output += Code.dest(parser.dest())
-                            output += Code.jump(parser.jump())
-                        else:
-                            output = Code.symbol(parser.symbol())                  
-                        file.write(output + "\n")
-                    except:
-                        pass
-                    #debug(parser, output)
-    print(f"Successfully assembled {filename} into {outputFileName}.")
+    symbol_table = st.SymbolTable(parser)
+    with open(output_file, 'w') as file:
+        print(f"Assembling {file_name}...")
+        while parser.has_more_commands():
+                parser.advance()
+                output = "111"
+                try:
+                    if parser.command_type == "C_COMMAND":
+                        output += Code.comp(parser.comp())
+                        output += Code.dest(parser.dest())
+                        output += Code.jump(parser.jump())
+                    elif parser.command_type == "A_COMMAND":
+                        output = Code.symbol(parser.symbol(symbol_table))
+                    else:
+                        continue                  
+                    file.write(output + "\n")
+                except:
+                    pass
+                # debug(parser, symbol_table, output)
+        print(symbol_table.symbol_table)
+    print(f"Successfully assembled {file_name} into {output_file_name}.")
 
 
-def debug(parser, output):
-    template = "{:<5} | {:<8} | dest {:<6} | comp {:<6} | jump {:<6} | symbol {:<5} | bin {:<16} | {:<7} {:3} {:3}"
+def debug(parser, symbol_table, output):
+    template = "{:<7} | {:<8} | dest {:<6} | comp {:<6} | jump {:<6} | symbol {:<5} | bin {:<16} | {:<7} {:3} {:3}"
     print(template.format(
         parser.current_line if parser.current_line is not None else "None",
         parser.command_type if parser.command_type is not None else "None",
         parser.dest() if parser.dest() is not None else "None",
         parser.comp() if parser.comp() is not None else "None",
         parser.jump() if parser.jump() is not None else "None",
-        parser.symbol() if parser.symbol() is not None else "None",
-        output if parser.command_type == "C_COMMAND" else Code.symbol(parser.symbol()),
+        parser.symbol(symbol_table) if parser.symbol(symbol_table) is not None else "None",
+        output if parser.command_type == "C_COMMAND" else Code.symbol(parser.symbol(symbol_table)) if Code.symbol(parser.symbol(symbol_table)) is not None else "None",
         Code.comp(parser.comp()),
         Code.dest(parser.dest()),
         Code.jump(parser.jump())
