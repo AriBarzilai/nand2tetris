@@ -1,11 +1,9 @@
 import re
-import SymbolTable as st
 
 class Parser:
     file = None
     current_line = None
     command_type = None
-
 
     def __init__(self, filePath):
         self.file = open(filePath, 'r')
@@ -35,10 +33,11 @@ class Parser:
         Returns:
             _str_: The current command.
         """
-        while self.has_more_commands:
+
+        while self.has_more_commands: # we continue scanning until a valid command is found and processed
             temp_str = self.file.readline()
             remove_whitespace = re.sub(r'\s+', '', temp_str)
-            comment_index = remove_whitespace.find('//')  # looks for inline comments
+            comment_index = remove_whitespace.find('//')  #  looks for comments in line, marked by '//'
             if comment_index != -1:
                 remove_whitespace = remove_whitespace[:comment_index]
             if remove_whitespace == '':
@@ -50,9 +49,8 @@ class Parser:
             if '(' in self.current_line and ')' in self.current_line:
                 self.set_command_type("L_COMMAND")
             if '=' in self.current_line or ';' in self.current_line:
-                self.set_command_type("C_COMMAND")
-                
-            break  # Exit the loop after processing the current line
+                self.set_command_type("C_COMMAND")    
+            break  # Exit the loop after succesfully processing the command
 
     
     def symbol(self, symbol_table):
@@ -66,7 +64,7 @@ class Parser:
             try:
                 return int(symbol)
             except:
-                return symbol_table.get_address(symbol)
+                return symbol_table.get_address(symbol)                    
         elif self.command_type == "L_COMMAND":
             return self.current_line[1:-1]
         
@@ -106,7 +104,8 @@ class Parser:
             semicolon_index = self.current_line.find(";")
             if semicolon_index != -1 and semicolon_index != len(self.current_line)-1:
                 return self.current_line[semicolon_index+1:]
-                
+    
+    # Resets the parser to the beginning of the file.            
     def reset(self):
         self.file.seek(0)
         self.current_line = None

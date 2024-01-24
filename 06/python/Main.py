@@ -4,7 +4,7 @@ import SymbolTable as st
 import os
 import sys
 
-
+DEBUG_MODE = False # Prints additional information about the assembly process if set to True.
 
 def main():
     if len(sys.argv) < 2:
@@ -51,13 +51,13 @@ def assembleFile(file_path):
                     file.write(output + "\n")
                 except:
                     pass
-                # debug(parser, symbol_table, output)
-        print(symbol_table.symbol_table)
+                if DEBUG_MODE: debug(parser, symbol_table, output)
+        if DEBUG_MODE: print(symbol_table.symbol_table)
     print(f"Successfully assembled {file_name} into {output_file_name}.")
 
 
 def debug(parser, symbol_table, output):
-    template = "{:<7} | {:<8} | dest {:<6} | comp {:<6} | jump {:<6} | symbol {:<5} | bin {:<16} | {:<7} {:3} {:3}"
+    template = "{:<16} | {:<8} | dest {:<6} | comp {:<6} | jump {:<6} | symbol {:<5} | bin {:<16} | {:<7} {:3} {:3}"
     print(template.format(
         parser.current_line if parser.current_line is not None else "None",
         parser.command_type if parser.command_type is not None else "None",
