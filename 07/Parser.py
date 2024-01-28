@@ -1,5 +1,21 @@
 import re
 
+from enum import Enum, auto
+
+class COMMAND_TYPE(Enum):
+    ARITHMETIC = auto()
+    PUSH = auto()
+    POP = auto()
+    LABEL = auto()
+    GOTO = auto()
+    IF = auto()
+    FUNCTION = auto()
+    RETURN = auto()
+    CALL = auto()
+C = COMMAND_TYPE
+    
+ARITHMETIC_OPERATIONS = {'add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not'}
+
 class Parser:
     
     def __init__(self, filePath):
@@ -33,38 +49,39 @@ class Parser:
                 continue
             self.current_line = remove_whitespace
 
-            if 'add, sub, neg, mult div' in self.current_line:
-                self.set_command_type("C_ARITHMETIC")
-            if 'push' in self.current_line in self.current_line:
-                self.set_command_type("C_PUSH")
-            if 'pop' in self.current_line in self.current_line:
-                self.set_command_type("C_POP")
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_LABEL") 
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_GOTO")
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_IF")
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_FUNCTION")
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_RETURN")
-            if '' in self.current_line in self.current_line:
-                self.set_command_type("C_CALL")   
+            if 'push' in self.current_line:
+                self.set_command_type(C.PUSH)
+            elif 'pop' in self.current_line:
+                self.set_command_type(C.POP)
+            elif any(op in self.current_line for op in ARITHMETIC_OPERATIONS):
+                self.set_command_type(C.ARITHMETIC)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_LABEL
+                self.set_command_type(C.LABEL)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_GOTO
+                self.set_command_type(C.GOTO)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_IF
+                self.set_command_type(C.IF)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_FUNCTION
+                self.set_command_type(C.FUNCTION)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_RETURN
+                self.set_command_type(C.RETURN)
+            elif '' in self.current_line:  #TODO: Add the appropriate condition for C_CALL
+                self.set_command_type(C.CALL)
+                
             break  # Exit the loop after succesfully processing the command
 
-    def set_command_type(self, string):
+    def set_command_type(self, command_type: COMMAND_TYPE):
         """Sets a command type for the current line.
 
         Args:
             string (_str_): The command type to be set.
         """
-        self.command_type = string
+        self.command_type = command_type
         
     def arg1(self):
-        if self.command_type == "C_ARITHMETIC":
+        if self.command_type == C.ARITHMETIC:
             return self.current_line
-        elif self.command_type != "C_RETURN":
+        elif self.command_type != C.RETURN:
             start_index = self.current_line.find(' ')
             end_index = self.current_line[start_index:].find(' ')
             if end_index == -1:
@@ -72,6 +89,6 @@ class Parser:
             return self.current_line[start_index:end_index]
         
     def arg2(self):
-        start_index = len(self.current_line) - self.current_line[::-1].find(' ') - 1
-        return self.current_line[start_index:]
-            
+        if self.command_type != C.RETURN:
+            start_index = len(self.current_line) - self.current_line[::-1].find(' ') - 1
+            return self.current_line[start_index:]             
