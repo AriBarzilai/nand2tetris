@@ -1,3 +1,5 @@
+from Parser import COMMAND_TYPE as C
+
 class CodeWriter:
     
     segment = {
@@ -11,6 +13,9 @@ class CodeWriter:
         
     def set_file_name(self, file_name: str):
         self._file_name = file_name
+    
+    def get_file_name(self):
+        return self._file_name
     
     def write_arithmetic(self, operation):
             '''Apply operation to top of stack'''
@@ -59,13 +64,13 @@ class CodeWriter:
                 raise ValueError('{} is an invalid argument'.format(operation))
             self._increment_SP()
         
-    def write_push_pop(self, command, segment: str, index: int):
-        if command == "C_PUSH":
+    def write_push_pop(self, command_type, segment: str, index: int):
+        if command_type == C.PUSH:
             self._push(segment, index)
-        elif command == "C_POP":
+        elif command_type == C.POP:
             self._pop(segment, index)
         else:
-            raise ValueError("Invalid command: {0}".format(command))
+            raise ValueError("Invalid command: {0}".format(command_type))
     
     def close(self):
         self._output_file.close()
