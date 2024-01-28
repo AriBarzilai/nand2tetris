@@ -60,7 +60,12 @@ class CodeWriter:
             self._increment_SP()
         
     def write_push_pop(self, command, segment: str, index: int):
-        pass
+        if command == "C_PUSH":
+            self._push(segment, index)
+        elif command == "C_POP":
+            self._pop(segment, index)
+        else:
+            raise ValueError("Invalid command: {0}".format(command))
     
     def close(self):
         self._output_file.close()
@@ -73,11 +78,7 @@ class CodeWriter:
             self._write("@{0}".format(index))
             self._write("D=A")
         else:
-            self._write("@{0}".format(self.segment[segment]))
-            self._write("D=A")
-            self._write("@{0}".format(index))
-            self._write("D=D+A")
-            self._write("@D")
+            self._write_goto_arr_index(self.segment[segment], index) 
             self._write("D=M")
         
         # set top of stack to D    
@@ -94,21 +95,29 @@ class CodeWriter:
             raise ValueError("constant segment is invalid for pop command")
         segment, index = self._seg_to_addr(segment, index)
         
-        # get value stored in top of stack, and soft-delete it
+        # gets address we will pop value to
+        if segment == "constant": # segment was originally static or temp; 
+            self._write("@{0}".format(index))
+        else:
+            self._write_goto_arr_index(self.segment[segment], index) 
+          
+        #store address we return value to  
+        self._write("D=A") 
+        self._write("@R13")
+        self._write("M=D")
+        
+        # get value stored in top of stack, pop it into D
         self._write("@SP")
         self._write("AM=M-1")
         self._write("D=M")
         
-        if segment == "constant": # segment was originally static or temp
-            self._write("@{0}".format(index))
-            self._write("M=D")
-        else:
-            self._write("@{0}".format(self.segment[segment]))
-        
-        pass
+        # go to address stored in @R13, and store in it D
+        self._write("@R13")
+        self._write("A=M")
+        self._write("M=D")
     
     def _write(self, asm_command: str):
-        self._output_file.write(asm_command + '\n')
+        self._output_file.write(asm_command + '\n;)')
         
     def _seg_to_const(segment_start: int, rel_index: int, max_index: int):
         index = segment_start + rel_index
@@ -129,30 +138,3 @@ class CodeWriter:
             else:
                 segment = "that"
         return segment, index
-    
-    def _push_D_to_stack(self):
-        '''Push from D onto top of stack, increment @SP'''
-        self.write('@SP') # Get current stack pointer
-        self.write('A=M') # Set address to current stack pointer
-        self.write('M=D') # Write data to top of stack
-        self.write('@SP') # Increment SP
-        self.write('M=M+1')
-
-    def _pop_stack_to_D(self):
-        '''Decrement @SP, pop from top of stack onto D'''
-        self.write('@SP')
-        self.write('M=M-1') # Decrement SP
-        self.write('A=M') # Set address to current stack pointer
-        self.write('D=M') # Get data from top of stack
-
-    def _decrement_SP(self):
-        self.write('@SP')
-        self.write('M=M-1')
-
-    def _increment_SP(self):
-        self.write('@SP')
-        self.write('M=M+1')
-
-    def _set_A_to_stack(self):
-        self.write('@SP')
-        self.write('A=M')
