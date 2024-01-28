@@ -43,11 +43,11 @@ class CodeWriter:
                 self._write('@BOOL{}'.format(self.bool_count))
 
                 if operation == 'eq':
-                    self._write('D;JEQ') # if x == y, x - y == 0
+                    self._write('D;JEQ') # if x == y
                 elif operation == 'gt':
-                    self._write('D;JGT') # if x > y, x - y > 0
+                    self._write('D;JGT') # if x > y
                 elif operation == 'lt':
-                    self._write('D;JLT') # if x < y, x - y < 0
+                    self._write('D;JLT') # if x < y
 
                 self._set_A_to_stack()
                 self._write('M=0') # False
@@ -151,3 +151,30 @@ class CodeWriter:
         self._write("@{0}".format(rel_index))
         self._write("D=D+A")
         self._write("A=D")
+
+    def _push_D_to_stack(self):
+        '''Push from D onto top of stack, increment @SP'''
+        self._write('@SP') # Get current stack pointer
+        self._write('A=M') # Set address to current stack pointer
+        self._write('M=D') # Write data to top of stack
+        self._write('@SP') # Increment SP
+        self._write('M=M+1')
+
+    def _pop_stack_to_D(self):
+        '''Decrement @SP, pop from top of stack onto D'''
+        self._write('@SP')
+        self._write('M=M-1') # Decrement SP
+        self._write('A=M') # Set address to current stack pointer
+        self._write('D=M') # Get data from top of stack
+
+    def _decrement_SP(self):
+        self._write('@SP')
+        self._write('M=M-1')
+
+    def _increment_SP(self):
+        self._write('@SP')
+        self._write('M=M+1')
+
+    def _set_A_to_stack(self):
+        self._write('@SP')
+        self._write('A=M')  
