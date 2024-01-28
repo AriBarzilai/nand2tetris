@@ -41,10 +41,11 @@ class Parser:
 
         while self.has_more_commands: # we continue scanning until a valid command is found and processed
             temp_str = self._file.readline()
-            remove_whitespace = re.sub(r'\s+', '', temp_str)
+            remove_whitespace = re.sub(r'\s+', ' ', temp_str)
             comment_index = remove_whitespace.find('//')  #  looks for comments in line, marked by '//'
             if comment_index != -1:
                 remove_whitespace = remove_whitespace[:comment_index]
+            remove_whitespace = remove_whitespace.strip()
             if remove_whitespace == '':
                 continue
             self.current_line = remove_whitespace
@@ -82,13 +83,13 @@ class Parser:
         if self.command_type == C.ARITHMETIC:
             return self.current_line
         elif self.command_type != C.RETURN:
-            start_index = self.current_line.find(' ')
-            end_index = self.current_line[start_index:].find(' ')
+            start_index = self.current_line.find(' ') + 1
+            end_index = self.current_line[start_index:].find(' ') + start_index
             if end_index == -1:
                 return self.current_line[start_index:]
             return self.current_line[start_index:end_index]
         
     def arg2(self):
         if self.command_type != C.RETURN:
-            start_index = len(self.current_line) - self.current_line[::-1].find(' ') - 1
+            start_index = len(self.current_line) - self.current_line[::-1].find(' ')
             return self.current_line[start_index:]             

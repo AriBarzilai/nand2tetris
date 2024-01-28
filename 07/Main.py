@@ -7,7 +7,7 @@ import sys
 def main():
     if len(sys.argv) < 2:
         raise ValueError("Error! Enter a path to a file or a directory as an argument.")
-    
+
     path = os.path.normpath(sys.argv[1])
     path = os.path.abspath(path)  
     parent_dir, file_name = os.path.split(path)              

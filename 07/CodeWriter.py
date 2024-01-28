@@ -9,7 +9,8 @@ class CodeWriter:
     
     def __init__(self, output_path: str):
         self._output_file = open(output_path, 'w')
-        self.bool_count = 0 # Count of boolean comparisons 
+        self.bool_count = 0 # Count of boolean comparisons
+        self._file_name = ""
         
     def set_file_name(self, file_name: str):
         self._file_name = file_name
@@ -122,7 +123,7 @@ class CodeWriter:
         self._write("M=D")
     
     def _write(self, asm_command: str):
-        self._output_file.write(asm_command + '\n;)')
+        self._output_file.write(asm_command + '\n')
         
     def _seg_to_const(segment_start: int, rel_index: int, max_index: int):
         index = segment_start + rel_index
