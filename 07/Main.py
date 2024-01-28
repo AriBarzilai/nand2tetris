@@ -1,5 +1,5 @@
 import CodeWriter as Code
-from Parser import Parser as ps
+import Parser as ps
 from Parser import COMMAND_TYPE as C
 import os
 import sys

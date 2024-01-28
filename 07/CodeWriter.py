@@ -143,3 +143,11 @@ class CodeWriter:
             else:
                 segment = "that"
         return segment, index
+    
+    def _write_goto_arr_index(self, arr_index: int, rel_index: int):
+        """Writes to file a common assembly operation: given an array's starting index and a relative index, goes to arr[rel_index]"""
+        self._write("@{0}".format(arr_index))
+        self._write("D=M")
+        self._write("@{0}".format(rel_index))
+        self._write("D=D+A")
+        self._write("A=D")
