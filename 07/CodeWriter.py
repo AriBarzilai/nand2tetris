@@ -7,6 +7,7 @@ class CodeWriter:
         "local": "LCL",
         "this": "THIS",
         "that": "THAT",
+        "temp": "R5",
     }
     
     def __init__(self, output_path: str):
@@ -26,8 +27,8 @@ class CodeWriter:
         """Writes the assembly code for the given arithmetic operation to the top value(s) on the stack."""
         if operation not in ['neg', 'not']: # Binary operator
             self._pop_stack_to_D()
-        self._decrement_SP()
-        self._set_A_to_stack()
+        self._decrement_A()
+        #self._set_A_to_stack()
 
         # Arithmetic operators
         if operation == 'add': 
@@ -67,7 +68,7 @@ class CodeWriter:
             self.bool_count += 1
         else:
             raise ValueError('{} is an invalid argument'.format(operation))
-        self._increment_SP()
+        #self._increment_SP()
         
     def write_push_pop(self, command_type, segment: str, index: int):
         """Writes the assembly code for pushing or popping the given segment at the given index to/from the stack."""
@@ -83,24 +84,15 @@ class CodeWriter:
         self._output_file.close()
         
     def _push(self, segment, index):
-        """Writes to file the assembly code for pushing the given segment at the given index to the stack."""
-        
+        """Writes to file the assembly code for pushing the given segment at the given index to the stack."""       
         # if constant, set: D=index. else, set: D=segment[index]
         if segment == "constant":
             self._write("@{0}".format(index))
             self._write("D=A")
         else:
-            self._seg_to_addr(segment, index)
-            self._write("D=M")
-        
-        # set top of stack to D    
-        self._write("@SP")
-        self._write("A=M")
-        self._write("M=D")
-        
-        # move stack pointer to top of stack
-        self._write("@SP")
-        self._write("M=M+1")
+            self._seg_to_addr(segment, index, True)
+            self._write("D=M")        
+        self._push_D_to_stack()
     
     def _pop(self, segment, index):
         """Writes to file the assembly code for popping the top element of the stack to a given segment's index."""
@@ -109,13 +101,11 @@ class CodeWriter:
         self._seg_to_addr(segment, index) 
           
         #store address we return value to  
-        self._write("D=A") 
         self._write("@R13")
         self._write("M=D")
         
-        # get value stored in top of stack, pop it into D
-        self._write("@SP")
-        self._write("AM=M-1")
+        # pop value stored in top of stack, store it into D
+        self._pop_SP()
         self._write("D=M")
         
         # go to address stored in @R13, and store in it D
@@ -134,25 +124,26 @@ class CodeWriter:
             raise ValueError("Index out of bounds: {0} (max: {1})".format(index, max_index))
         return "constant", index
     
-    def _seg_to_addr(self, segment, index):
+    def _seg_to_addr(self, segment, index, isPush: bool = False):
         """Converts a segment to an address, and checks if index is out of bounds"""
         if segment == "static": # convert to constant address
             segment, index = self._seg_to_const(16, index, 255)
-        elif segment == "temp": # convert to constant address
-            segment, index = self._seg_to_const(5, int(index), 12)
-            pass
+        if segment == "temp":
+            index = str(int(index) + 5)
         if segment in self.segment:
             segment = self.segment[segment]
-            self._write_goto_arr_index(segment, index) # go to segment[index]
+            self._write_get_or_goto_arr_index(segment, index, isPush) # go to segment[index]
         return segment, index
     
-    def _write_goto_arr_index(self, arr_index: int, rel_index: int):
-        """Given a symbol and an index, writes to file the assembly code for going to symbol[index]"""
+    def _write_get_or_goto_arr_index(self, arr_index: int, rel_index: int, isPush: bool = False):
+        """Given a symbol and an index, writes to file the assembly code for storing symbol[index] in D"""
         self._write("@{0}".format(arr_index))
         self._write("D=M")
         self._write("@{0}".format(rel_index))
-        self._write("D=D+A")
-        self._write("A=D")
+        if isPush:
+            self._write("A=D+A")
+        else:
+            self._write("D=D+A")
 
     def _push_D_to_stack(self):
         """Writes to file a common assembly operation: push D to top of stack"""
@@ -165,14 +156,17 @@ class CodeWriter:
     def _pop_stack_to_D(self):
         """Writes to file a common assembly operation: pop top of stack to D"""
         self._write('@SP')
-        self._write('M=M-1') # Decrement SP
-        self._write('A=M') # Set address to current stack pointer
+        self._write('AM=M-1') # Decrement SP and set address to new stack pointer
         self._write('D=M') # Get data from top of stack
 
-    def _decrement_SP(self):
+    def _pop_SP(self):
         """Writes to file a common assembly operation: decrement SP"""
         self._write('@SP')
-        self._write('M=M-1')
+        self._write('AM=M-1')
+        
+    def _decrement_A(self):
+        """Writes to file a common assembly operation: decrement A"""
+        self._write('A=A-1')
 
     def _increment_SP(self):
         """Writes to file a common assembly operation: increment SP"""
