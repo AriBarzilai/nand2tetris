@@ -88,8 +88,9 @@ class CodeWriter:
         if segment == "constant":
             self._write("@{0}".format(index))
             self._write("D=A")
-        elif index == 0 and segment in self.segment:
+        elif index == '0' and segment in self.segment:
             self._write("@{0}".format(self.segment[segment]))
+            self._write("A=M")
             self._write("D=M")
         else:
             self._seg_to_addr(segment, index, True)
@@ -100,7 +101,12 @@ class CodeWriter:
         """Writes to file the assembly code for popping the top element of the stack to a given segment's index."""
         if segment == "constant":
             raise ValueError("constant segment is invalid for pop command")        
-        self._seg_to_addr(segment, index) 
+        if index == '0' and segment in self.segment:
+            self._write("@{0}".format(self.segment[segment]))
+            self._write("A=M")
+            self._write("D=M")
+        else:
+            self._seg_to_addr(segment, index)
           
         #store address we return value to  
         self._write("@R13")
