@@ -28,7 +28,6 @@ class CodeWriter:
         if operation not in ['neg', 'not']: # Binary operator
             self._pop_stack_to_D()
         self._decrement_A()
-        #self._set_A_to_stack()
 
         # Arithmetic operators
         if operation == 'add': 
@@ -85,10 +84,13 @@ class CodeWriter:
         
     def _push(self, segment, index):
         """Writes to file the assembly code for pushing the given segment at the given index to the stack."""       
-        # if constant, set: D=index. else, set: D=segment[index]
+        # if constant, we set D=index. else, set: D=segment[index]
         if segment == "constant":
             self._write("@{0}".format(index))
             self._write("D=A")
+        elif index == 0 and segment in self.segment:
+            self._write("@{0}".format(self.segment[segment]))
+            self._write("D=M")
         else:
             self._seg_to_addr(segment, index, True)
             self._write("D=M")        
@@ -124,19 +126,43 @@ class CodeWriter:
             raise ValueError("Index out of bounds: {0} (max: {1})".format(index, max_index))
         return "constant", index
     
-    def _seg_to_addr(self, segment, index, isPush: bool = False):
-        """Converts a segment to an address, and checks if index is out of bounds"""
+    def _seg_to_addr(self, segment: str, index: str, isPush: bool = False):
+        """Summary:
+            Converts a segment to an address, and checks if index is out of bounds
+
+        Args:
+            segment (str): The segment type, as detailed in the Nand2Tetris VM language specification
+            index (str): a numeric string representing the index relative to the segment
+            isPush (bool, optional): Whether the operation applied is a Push operation. Defaults to False.
+
+        Returns:
+            str: the segment, after conversion to an address
+            str: the index, after conversion to an address
+        """
         if segment == "static": # convert to constant address
             segment, index = self._seg_to_const(16, index, 255)
-        if segment == "temp":
-            index = str(int(index) + 5)
+        elif segment == "temp":
+            index = str(int(index) + 5) # because temp is the actual address (located at 5), not a pointer
+        elif segment == "pointer":
+            if int(index):
+                segment = "that"
+            else:
+                segment = "this"
+            index = '0'
+            
+            if isPush:
+                self._push(segment, index)
+            else:
+                self._pop(segment, index)
+            return segment, index
+         
         if segment in self.segment:
             segment = self.segment[segment]
             self._write_get_or_goto_arr_index(segment, index, isPush) # go to segment[index]
         return segment, index
     
     def _write_get_or_goto_arr_index(self, arr_index: int, rel_index: int, isPush: bool = False):
-        """Given a symbol and an index, writes to file the assembly code for storing symbol[index] in D"""
+        """Given a pointer to an array and an index, writes to file the assembly code for storing symbol[index] in D"""
         self._write("@{0}".format(arr_index))
         self._write("D=M")
         self._write("@{0}".format(rel_index))

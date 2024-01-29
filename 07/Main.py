@@ -8,7 +8,7 @@ def main():
     if len(sys.argv) < 2:
     #    raise ValueError("Error! Enter a path to a file or a directory as an argument.")
         pass
-    path = r".\projects\07\MemoryAccess\BasicTest"
+    path = r".\projects\07\MemoryAccess\PointerTest"
     #path = os.path.normpath(sys.argv[1])
     path = os.path.abspath(path)  
     parent_dir, file_name = os.path.split(path)              
