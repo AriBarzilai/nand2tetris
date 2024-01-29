@@ -6,9 +6,10 @@ import sys
 
 def main():
     if len(sys.argv) < 2:
-        raise ValueError("Error! Enter a path to a file or a directory as an argument.")
-
-    path = os.path.normpath(sys.argv[1])
+    #    raise ValueError("Error! Enter a path to a file or a directory as an argument.")
+        pass
+    path = r".\projects\07\MemoryAccess\BasicTest"
+    #path = os.path.normpath(sys.argv[1])
     path = os.path.abspath(path)  
     parent_dir, file_name = os.path.split(path)              
     output_fname = f"{os.path.splitext(file_name)[0]}.asm"
@@ -24,7 +25,7 @@ def main():
                 translate_file(input_file, code_writer)
     else:
         translate_file(path, code_writer)
-        
+    print("Done! File is located at {}".format(output_path))    
     code_writer.close()
         
 def translate_file(file_path, code_writer : Code):

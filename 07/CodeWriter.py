@@ -5,6 +5,8 @@ class CodeWriter:
     segment = {
         "argument": "ARG",
         "local": "LCL",
+        "this": "THIS",
+        "that": "THAT",
     }
     
     def __init__(self, output_path: str):
@@ -132,7 +134,7 @@ class CodeWriter:
         """Writes a given assembly command to the output file."""
         self._output_file.write(asm_command + '\n')
         
-    def _seg_to_const(segment_start: int, rel_index: int, max_index: int):
+    def _seg_to_const(self, segment_start: int, rel_index: int, max_index: int):
         """Converts a segment to a constant address, and checks if index exceeds pre-defined bounds"""
         index = segment_start + rel_index
         if index > max_index:
