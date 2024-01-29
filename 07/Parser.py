@@ -92,4 +92,4 @@ class Parser:
     def arg2(self):
         if self.command_type != C.RETURN:
             start_index = len(self.current_line) - self.current_line[::-1].find(' ')
-            return self.current_line[start_index:]             
+            return self.current_line[start_index:]        

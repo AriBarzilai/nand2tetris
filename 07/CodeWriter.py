@@ -84,14 +84,13 @@ class CodeWriter:
         
     def _push(self, segment, index):
         """Writes to file the assembly code for pushing the given segment at the given index to the stack."""
-        segment, index = self._seg_to_addr(segment, index)
         
         # if constant, set: D=index. else, set: D=segment[index]
         if segment == "constant":
             self._write("@{0}".format(index))
             self._write("D=A")
         else:
-            self._write_goto_arr_index(self.segment[segment], index) 
+            self._seg_to_addr(segment, index)
             self._write("D=M")
         
         # set top of stack to D    
@@ -106,14 +105,8 @@ class CodeWriter:
     def _pop(self, segment, index):
         """Writes to file the assembly code for popping the top element of the stack to a given segment's index."""
         if segment == "constant":
-            raise ValueError("constant segment is invalid for pop command")
-        segment, index = self._seg_to_addr(segment, index)
-        
-        # gets address we will pop value to
-        if segment == "constant": # segment was originally static or temp; 
-            self._write("@{0}".format(index))
-        else:
-            self._write_goto_arr_index(self.segment[segment], index) 
+            raise ValueError("constant segment is invalid for pop command")        
+        self._seg_to_addr(segment, index) 
           
         #store address we return value to  
         self._write("D=A") 
@@ -146,18 +139,15 @@ class CodeWriter:
         if segment == "static": # convert to constant address
             segment, index = self._seg_to_const(16, index, 255)
         elif segment == "temp": # convert to constant address
-            segment, index = self._seg_to_const(5, index, 12)
-        elif segment == "pointer":
-            if index > 1:
-                raise ValueError("Index out of bounds") 
-            if index:
-                segment = "this"
-            else:
-                segment = "that"
+            segment, index = self._seg_to_const(5, int(index), 12)
+            pass
+        if segment in self.segment:
+            segment = self.segment[segment]
+            self._write_goto_arr_index(segment, index) # go to segment[index]
         return segment, index
     
     def _write_goto_arr_index(self, arr_index: int, rel_index: int):
-        """Writes to file a common assembly operation: given an array's starting index and a relative index, goes to arr[rel_index]"""
+        """Given a symbol and an index, writes to file the assembly code for going to symbol[index]"""
         self._write("@{0}".format(arr_index))
         self._write("D=M")
         self._write("@{0}".format(rel_index))
