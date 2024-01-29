@@ -17,11 +17,11 @@ def main():
         print("assembling the files in {}".format(path))
         for file in os.listdir(path):
             if file.endswith(".asm"):
-                assembleFile(os.path.join(path, file))
+                assemble_file(os.path.join(path, file))
     else:
-        assembleFile(path)
+        assemble_file(path)
 
-def assembleFile(file_path):
+def assemble_file(file_path):
     """Takes in a normalized file name as an argument and outputs a .hack file with the same name as the input file.
 
     Raises:

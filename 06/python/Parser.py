@@ -1,12 +1,12 @@
 import re
 
 class Parser:
-    file = None
-    current_line = None
-    command_type = None
+    """Parses the next command from a .asm Hack-language file into its underlying components."""
 
     def __init__(self, filePath):
         self.file = open(filePath, 'r')
+        self.current_line = None
+        self.command_type = None
         
     def has_more_commands(self):
         """ Checks if there are more commands in the input.

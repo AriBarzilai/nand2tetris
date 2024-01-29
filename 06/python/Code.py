@@ -1,3 +1,5 @@
+"""Module for translating the components of Hack-language commands into binary codes. """
+
 _jump_codes = {None: '000',
                'JGT' : '001',
                'JEQ' : '010',

@@ -13,59 +13,62 @@ class CodeWriter:
         self._file_name = ""
         
     def set_file_name(self, file_name: str):
+        """Informs the code writer that the translation of a new VM file has started."""
         self._file_name = file_name
     
     def get_file_name(self):
+        """Returns the name of the current VM file being translated."""
         return self._file_name
     
     def write_arithmetic(self, operation):
-            '''Apply operation to top of stack'''
-            if operation not in ['neg', 'not']: # Binary operator
-                self._pop_stack_to_D()
-            self._decrement_SP()
+        """Writes the assembly code for the given arithmetic operation to the top value(s) on the stack."""
+        if operation not in ['neg', 'not']: # Binary operator
+            self._pop_stack_to_D()
+        self._decrement_SP()
+        self._set_A_to_stack()
+
+        # Arithmetic operators
+        if operation == 'add': 
+            self._write('M=M+D')
+        elif operation == 'sub':
+            self._write('M=M-D')
+        elif operation == 'and':
+            self._write('M=M&D')
+        elif operation == 'or':
+            self._write('M=M|D')
+        elif operation == 'neg':
+            self._write('M=-M')
+        elif operation == 'not':
+            self._write('M=!M')
+        # Boolean operators
+        elif operation in ['eq', 'gt', 'lt']: 
+            self._write('D=M-D')
+            self._write('@BOOL{}'.format(self.bool_count))
+
+            if operation == 'eq':
+                self._write('D;JEQ') # if x == y
+            elif operation == 'gt':
+                self._write('D;JGT') # if x > y
+            elif operation == 'lt':
+                self._write('D;JLT') # if x < y
+
             self._set_A_to_stack()
+            self._write('M=0') # False
+            self._write('@ENDBOOL{}'.format(self.bool_count))
+            self._write('0;JMP')
 
-            # Arithmetic operators
-            if operation == 'add': 
-                self._write('M=M+D')
-            elif operation == 'sub':
-                self._write('M=M-D')
-            elif operation == 'and':
-                self._write('M=M&D')
-            elif operation == 'or':
-                self._write('M=M|D')
-            elif operation == 'neg':
-                self._write('M=-M')
-            elif operation == 'not':
-                self._write('M=!M')
-            # Boolean operators
-            elif operation in ['eq', 'gt', 'lt']: 
-                self._write('D=M-D')
-                self._write('@BOOL{}'.format(self.bool_count))
+            self._write('(BOOL{})'.format(self.bool_count))
+            self._set_A_to_stack()
+            self._write('M=-1') # True
 
-                if operation == 'eq':
-                    self._write('D;JEQ') # if x == y
-                elif operation == 'gt':
-                    self._write('D;JGT') # if x > y
-                elif operation == 'lt':
-                    self._write('D;JLT') # if x < y
-
-                self._set_A_to_stack()
-                self._write('M=0') # False
-                self._write('@ENDBOOL{}'.format(self.bool_count))
-                self._write('0;JMP')
-
-                self._write('(BOOL{})'.format(self.bool_count))
-                self._set_A_to_stack()
-                self._write('M=-1') # True
-
-                self._write('(ENDBOOL{})'.format(self.bool_count))
-                self.bool_count += 1
-            else:
-                raise ValueError('{} is an invalid argument'.format(operation))
-            self._increment_SP()
+            self._write('(ENDBOOL{})'.format(self.bool_count))
+            self.bool_count += 1
+        else:
+            raise ValueError('{} is an invalid argument'.format(operation))
+        self._increment_SP()
         
     def write_push_pop(self, command_type, segment: str, index: int):
+        """Writes the assembly code for pushing or popping the given segment at the given index to/from the stack."""
         if command_type == C.PUSH:
             self._push(segment, index)
         elif command_type == C.POP:
@@ -74,9 +77,11 @@ class CodeWriter:
             raise ValueError("Invalid command: {0}".format(command_type))
     
     def close(self):
+        """Closes the output .asm file."""
         self._output_file.close()
         
     def _push(self, segment, index):
+        """Writes to file the assembly code for pushing the given segment at the given index to the stack."""
         segment, index = self._seg_to_addr(segment, index)
         
         # if constant, set: D=index. else, set: D=segment[index]
@@ -97,6 +102,7 @@ class CodeWriter:
         self._write("M=M+1")
     
     def _pop(self, segment, index):
+        """Writes to file the assembly code for popping the top element of the stack to a given segment's index."""
         if segment == "constant":
             raise ValueError("constant segment is invalid for pop command")
         segment, index = self._seg_to_addr(segment, index)
@@ -123,15 +129,18 @@ class CodeWriter:
         self._write("M=D")
     
     def _write(self, asm_command: str):
+        """Writes a given assembly command to the output file."""
         self._output_file.write(asm_command + '\n')
         
     def _seg_to_const(segment_start: int, rel_index: int, max_index: int):
+        """Converts a segment to a constant address, and checks if index exceeds pre-defined bounds"""
         index = segment_start + rel_index
         if index > max_index:
             raise ValueError("Index out of bounds: {0} (max: {1})".format(index, max_index))
         return "constant", index
     
     def _seg_to_addr(self, segment, index):
+        """Converts a segment to an address, and checks if index is out of bounds"""
         if segment == "static": # convert to constant address
             segment, index = self._seg_to_const(16, index, 255)
         elif segment == "temp": # convert to constant address
@@ -154,7 +163,7 @@ class CodeWriter:
         self._write("A=D")
 
     def _push_D_to_stack(self):
-        '''Push from D onto top of stack, increment @SP'''
+        """Writes to file a common assembly operation: push D to top of stack"""
         self._write('@SP') # Get current stack pointer
         self._write('A=M') # Set address to current stack pointer
         self._write('M=D') # Write data to top of stack
@@ -162,20 +171,23 @@ class CodeWriter:
         self._write('M=M+1')
 
     def _pop_stack_to_D(self):
-        '''Decrement @SP, pop from top of stack onto D'''
+        """Writes to file a common assembly operation: pop top of stack to D"""
         self._write('@SP')
         self._write('M=M-1') # Decrement SP
         self._write('A=M') # Set address to current stack pointer
         self._write('D=M') # Get data from top of stack
 
     def _decrement_SP(self):
+        """Writes to file a common assembly operation: decrement SP"""
         self._write('@SP')
         self._write('M=M-1')
 
     def _increment_SP(self):
+        """Writes to file a common assembly operation: increment SP"""
         self._write('@SP')
         self._write('M=M+1')
 
     def _set_A_to_stack(self):
+        """Writes to file a common assembly operation: set A to the top of the stack"""
         self._write('@SP')
         self._write('A=M')  
