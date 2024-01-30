@@ -97,6 +97,27 @@ class CodeWriter:
         else:
             raise ValueError('Invalid command: {0}'.format(command_type))
 
+    def write_label(self, label):
+        """Writes the assembly code to define a label in the current VM file."""
+        self._write('({}${})'.format(self._file_name, label))
+
+    def write_goto(self, label):
+        """Writes the assembly code for an unconditional jump (goto) to the specified label in the current VM file."""
+        self.write('@{}${}'.format(self._file_name, label))
+        self.write('0;JMP')
+
+    def write_if(self, label):
+        """Writes the assembly code for a conditional jump to the specified label in the current VM file."""
+        self.pop_stack_to_D()
+        self.write('@{}${}'.format(self._file_name, label))
+        self.write('D;JNE')
+
+    def write_function(self, function_name, num_locals):
+        
+        self.write('({})'.format(function_name)) # write the function name inside parenthesis
+
+        # to complete............
+
     def close(self):
         self._output_file.close()
 
