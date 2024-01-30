@@ -8,26 +8,26 @@ class CodeWriter:
         "this": "THIS",
         "that": "THAT",
         "temp": "R5",
+        'pointer': 3,
+        'temp': 5,
+        'static': 16,
     }
     
     def __init__(self, output_path: str):
         self._output_file = open(output_path, 'w')
-        self.bool_count = 0 # Count of boolean comparisons
+        self._bool_count = 0 # Count of boolean comparisons
         self._file_name = ""
-        
+
     def set_file_name(self, file_name: str):
         """Informs the code writer that the translation of a new VM file has started."""
         self._file_name = file_name
-    
-    def get_file_name(self):
-        """Returns the name of the current VM file being translated."""
-        return self._file_name
-    
+
     def write_arithmetic(self, operation):
         """Writes the assembly code for the given arithmetic operation to the top value(s) on the stack."""
         if operation not in ['neg', 'not']: # Binary operator
             self._pop_stack_to_D()
-        self._decrement_A()
+        self._decrement_SP()
+        self._set_A_to_stack()
 
         # Arithmetic operators
         if operation == 'add': 
@@ -42,10 +42,11 @@ class CodeWriter:
             self._write('M=-M')
         elif operation == 'not':
             self._write('M=!M')
+            
         # Boolean operators
         elif operation in ['eq', 'gt', 'lt']: 
             self._write('D=M-D')
-            self._write('@BOOL{}'.format(self.bool_count))
+            self._write('@BOOL{}'.format(self._bool_count))
 
             if operation == 'eq':
                 self._write('D;JEQ') # if x == y
@@ -56,126 +57,69 @@ class CodeWriter:
 
             self._set_A_to_stack()
             self._write('M=0') # False
-            self._write('@ENDBOOL{}'.format(self.bool_count))
+            self._write('@ENDBOOL{}'.format(self._bool_count))
             self._write('0;JMP')
 
-            self._write('(BOOL{})'.format(self.bool_count))
+            self._write('(BOOL{})'.format(self._bool_count))
             self._set_A_to_stack()
             self._write('M=-1') # True
 
-            self._write('(ENDBOOL{})'.format(self.bool_count))
-            self.bool_count += 1
+            self._write('(ENDBOOL{})'.format(self._bool_count))
+            self._bool_count += 1
         else:
-            raise ValueError('{} is an invalid argument'.format(operation))
-        #self._increment_SP()
-        
-    def write_push_pop(self, command_type, segment: str, index: int):
+            raise ValueError("Invalid operator: {0}".format(operation))
+        self._increment_SP()
+
+    def write_push_pop(self, command_type, segment: str, index):
         """Writes the assembly code for pushing or popping the given segment at the given index to/from the stack."""
+        
+        self._seg_to_addr(segment, index)  
         if command_type == C.PUSH:
-            self._push(segment, index)
+            if segment == "constant":
+                self._write("D=A")
+            else:
+                self._write("D=M")
+            self._push_D_to_stack()
+            
         elif command_type == C.POP:
-            self._pop(segment, index)
+            self._write("D=A")
+            self._write("@R13")
+            self._write("M=D")
+            self._pop_stack_to_D()
+            self._write("@R13")
+            self._write("A=M")
+            self._write("M=D")
         else:
             raise ValueError("Invalid command: {0}".format(command_type))
-    
+
     def close(self):
-        """Closes the output .asm file."""
         self._output_file.close()
-        
-    def _push(self, segment, index):
-        """Writes to file the assembly code for pushing the given segment at the given index to the stack."""       
-        # if constant, we set D=index. else, set: D=segment[index]
-        if segment == "constant":
-            self._write("@{0}".format(index))
-            self._write("D=A")
-        elif index == '0' and segment in self.segment:
-            self._write("@{0}".format(self.segment[segment]))
-            self._write("A=M")
-            self._write("D=M")
-        else:
-            self._seg_to_addr(segment, index, True)
-            self._write("D=M")        
-        self._push_D_to_stack()
-    
-    def _pop(self, segment, index):
-        """Writes to file the assembly code for popping the top element of the stack to a given segment's index."""
-        if segment == "constant":
-            raise ValueError("constant segment is invalid for pop command")        
-        if index == '0' and segment in self.segment:
-            self._write("@{0}".format(self.segment[segment]))
-            self._write("A=M")
-            self._write("D=M")
-        else:
-            self._seg_to_addr(segment, index)
-          
-        #store address we return value to  
-        self._write("@R13")
-        self._write("M=D")
-        
-        # pop value stored in top of stack, store it into D
-        self._pop_SP()
-        self._write("D=M")
-        
-        # go to address stored in @R13, and store in it D
-        self._write("@R13")
-        self._write("A=M")
-        self._write("M=D")
-    
+
     def _write(self, asm_command: str):
         """Writes a given assembly command to the output file."""
-        self._output_file.write(asm_command + '\n')
-        
-    def _seg_to_const(self, segment_start: int, rel_index: int, max_index: int):
-        """Converts a segment to a constant address, and checks if index exceeds pre-defined bounds"""
-        index = segment_start + rel_index
-        if index > max_index:
-            raise ValueError("Index out of bounds: {0} (max: {1})".format(index, max_index))
-        return "constant", index
-    
-    def _seg_to_addr(self, segment: str, index: str, isPush: bool = False):
+        self._output_file.write(asm_command + "\n")
+
+    def _seg_to_addr(self, segment: str, index: str):
         """Summary:
-            Converts a segment to an address, and checks if index is out of bounds
+            Converts a segment to an address, and goes to that address.
 
         Args:
             segment (str): The segment type, as detailed in the Nand2Tetris VM language specification
             index (str): a numeric string representing the index relative to the segment
-            isPush (bool, optional): Whether the operation applied is a Push operation. Defaults to False.
-
-        Returns:
-            str: the segment, after conversion to an address
-            str: the index, after conversion to an address
         """
-        if segment == "static": # convert to constant address
-            segment, index = self._seg_to_const(16, index, 255)
-        elif segment == "temp":
-            index = str(int(index) + 5) # because temp is the actual address (located at 5), not a pointer
-        elif segment == "pointer":
-            if int(index):
-                segment = "that"
-            else:
-                segment = "this"
-            index = '0'
-            
-            if isPush:
-                self._push(segment, index)
-            else:
-                self._pop(segment, index)
-            return segment, index
-         
-        if segment in self.segment:
-            segment = self.segment[segment]
-            self._write_get_or_goto_arr_index(segment, index, isPush) # go to segment[index]
-        return segment, index
-    
-    def _write_get_or_goto_arr_index(self, arr_index: int, rel_index: int, isPush: bool = False):
-        """Given a pointer to an array and an index, writes to file the assembly code for storing symbol[index] in D"""
-        self._write("@{0}".format(arr_index))
-        self._write("D=M")
-        self._write("@{0}".format(rel_index))
-        if isPush:
-            self._write("A=D+A")
+        address = self.segment.get(segment)
+        if segment == "constant":
+            self._write("@" + index)
+        elif segment == "static":
+            self._write("@" + self._file_name + "." + index)
         else:
-            self._write("D=D+A")
+            try: # if the segment mapped to a constant (int) address
+                self._write("@R" + str(address + int(index)))
+            except: # if the segment mapped to a string
+                self._write("@" + address)
+                self._write("D=M")
+                self._write("@" + index)
+                self._write("A=D+A")
 
     def _push_D_to_stack(self):
         """Writes to file a common assembly operation: push D to top of stack"""
@@ -191,14 +135,9 @@ class CodeWriter:
         self._write('AM=M-1') # Decrement SP and set address to new stack pointer
         self._write('D=M') # Get data from top of stack
 
-    def _pop_SP(self):
-        """Writes to file a common assembly operation: decrement SP"""
+    def _decrement_SP(self):
         self._write('@SP')
-        self._write('AM=M-1')
-        
-    def _decrement_A(self):
-        """Writes to file a common assembly operation: decrement A"""
-        self._write('A=A-1')
+        self._write('M=M-1')
 
     def _increment_SP(self):
         """Writes to file a common assembly operation: increment SP"""
@@ -208,4 +147,4 @@ class CodeWriter:
     def _set_A_to_stack(self):
         """Writes to file a common assembly operation: set A to the top of the stack"""
         self._write('@SP')
-        self._write('A=M')  
+        self._write('A=M')
