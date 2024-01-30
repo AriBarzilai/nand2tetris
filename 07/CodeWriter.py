@@ -3,27 +3,31 @@ from Parser import COMMAND_TYPE as C
 class CodeWriter:
     
     segment = {
-        "argument": "ARG",
-        "local": "LCL",
-        "this": "THIS",
-        "that": "THAT",
-        "temp": "R5",
+        'argument': 'ARG',
+        'local': 'LCL',
+        'this': 'THIS',
+        'that': 'THAT',
+        'temp': 'R5',
         'pointer': 3,
         'temp': 5,
         'static': 16,
     }
     
-    def __init__(self, output_path: str):
+    def __init__(self, output_path: str, DEBUG_MODE: bool = False):
         self._output_file = open(output_path, 'w')
         self._bool_count = 0 # Count of boolean comparisons
-        self._file_name = ""
+        self._file_name = ''
+        self._DEBUG_MODE = DEBUG_MODE
 
     def set_file_name(self, file_name: str):
         """Informs the code writer that the translation of a new VM file has started."""
         self._file_name = file_name
+        if self._DEBUG_MODE: self._log('FILE {}:'.format(file_name))
 
-    def write_arithmetic(self, operation):
+    def write_arithmetic(self, operation: str):
         """Writes the assembly code for the given arithmetic operation to the top value(s) on the stack."""
+        
+        if self._DEBUG_MODE: self._log("COMMAND_TYPE.ARITHMETIC {0}".format(operation))
         if operation not in ['neg', 'not']: # Binary operator
             self._pop_stack_to_D()
         self._decrement_SP()
@@ -67,37 +71,42 @@ class CodeWriter:
             self._write('(ENDBOOL{})'.format(self._bool_count))
             self._bool_count += 1
         else:
-            raise ValueError("Invalid operator: {0}".format(operation))
+            raise ValueError('Invalid operator: {0}'.format(operation))
         self._increment_SP()
 
-    def write_push_pop(self, command_type, segment: str, index):
+    def write_push_pop(self, command_type: C, segment: str, index: str):
         """Writes the assembly code for pushing or popping the given segment at the given index to/from the stack."""
+        if self._DEBUG_MODE: self._log('{0} {1} {2}'.format(str(command_type), segment, index))
         
         self._seg_to_addr(segment, index)  
         if command_type == C.PUSH:
-            if segment == "constant":
-                self._write("D=A")
+            if segment == 'constant':
+                self._write('D=A')
             else:
-                self._write("D=M")
+                self._write('D=M')
             self._push_D_to_stack()
             
         elif command_type == C.POP:
-            self._write("D=A")
-            self._write("@R13")
-            self._write("M=D")
+            self._write('D=A')
+            self._write('@R13')
+            self._write('M=D')
             self._pop_stack_to_D()
-            self._write("@R13")
-            self._write("A=M")
-            self._write("M=D")
+            self._write('@R13')
+            self._write('A=M')
+            self._write('M=D')
         else:
-            raise ValueError("Invalid command: {0}".format(command_type))
+            raise ValueError('Invalid command: {0}'.format(command_type))
 
     def close(self):
         self._output_file.close()
 
     def _write(self, asm_command: str):
         """Writes a given assembly command to the output file."""
-        self._output_file.write(asm_command + "\n")
+        self._output_file.write(asm_command + '\n')
+        
+    def _log(self, message: str):
+        """Writes a given comment to the output file."""
+        self._write('// ' + message)
 
     def _seg_to_addr(self, segment: str, index: str):
         """Summary:
@@ -108,18 +117,18 @@ class CodeWriter:
             index (str): a numeric string representing the index relative to the segment
         """
         address = self.segment.get(segment)
-        if segment == "constant":
-            self._write("@" + index)
-        elif segment == "static":
-            self._write("@" + self._file_name + "." + index)
+        if segment == 'constant':
+            self._write('@' + index)
+        elif segment == 'static':
+            self._write('@' + self._file_name + '.' + index)
         else:
             try: # if the segment mapped to a constant (int) address
-                self._write("@R" + str(address + int(index)))
+                self._write('@R' + str(address + int(index)))
             except: # if the segment mapped to a string
-                self._write("@" + address)
-                self._write("D=M")
-                self._write("@" + index)
-                self._write("A=D+A")
+                self._write('@' + address)
+                self._write('D=M')
+                self._write('@' + index)
+                self._write('A=D+A')
 
     def _push_D_to_stack(self):
         """Writes to file a common assembly operation: push D to top of stack"""

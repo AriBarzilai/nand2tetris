@@ -4,6 +4,8 @@ from Parser import COMMAND_TYPE as C
 import os
 import sys
 
+DEBUG_MODE = False # logs to output file additional information about the translation process if set to True.
+
 def main():
     if len(sys.argv) < 2:
         raise ValueError('Error! Enter a path to a file or a directory as an argument.')
@@ -14,7 +16,7 @@ def main():
     output_fname = f'{os.path.splitext(file_name)[0]}.asm'
     output_path = os.path.join(path, output_fname) if os.path.isdir(path) else os.path.join(parent_dir, output_fname)
     
-    code_writer = Code.CodeWriter(output_path)        
+    code_writer = Code.CodeWriter(output_path, DEBUG_MODE)        
     if os.path.isdir(path):     
         print('translating the files in {}'.format(path))   
         for file in os.listdir(path):
@@ -27,14 +29,14 @@ def main():
     
     print('Done! File is located at {}'.format(output_path))  
         
-def translate_file(file_path, code_writer : Code):
+def translate_file(file_path: str, code_writer : Code):
     """Takes in a normalized file name as an argument and outputs to a .asm file
     Raises:
         ValueError: If no argument is given.
     """
-
     parser = ps.Parser(file_path)
     fname = os.path.basename(file_path)
+    code_writer.set_file_name(fname)
     print(f'Translating {fname}...')
     while parser.has_more_commands():
             parser.advance()

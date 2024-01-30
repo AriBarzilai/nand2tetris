@@ -18,7 +18,7 @@ ARITHMETIC_OPERATIONS = {'add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'no
 
 class Parser:
     
-    def __init__(self, filePath):
+    def __init__(self, filePath: str):
         self._file = open(filePath, 'r')
         
     def has_more_commands(self):
