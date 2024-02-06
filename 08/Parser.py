@@ -50,23 +50,26 @@ class Parser:
                 continue
             self.current_line = remove_whitespace
 
-            if 'push' in self.current_line:
+            arg0 = self.arg0()
+            
+            if 'push' in arg0:
                 self.set_command_type(C.PUSH)
-            elif 'pop' in self.current_line:
+            elif 'pop' in arg0:
                 self.set_command_type(C.POP)
-            elif any(op in self.current_line for op in ARITHMETIC_OPERATIONS):
+            elif any(op in arg0 for op in ARITHMETIC_OPERATIONS):
                 self.set_command_type(C.ARITHMETIC)
-            elif 'label' in self.current_line:
+            elif 'label' in arg0:
                 self.set_command_type(C.LABEL)
-            elif 'if-goto' in self.current_line:
+                print(self.arg1())
+            elif 'if-goto' in arg0:
                 self.set_command_type(C.IF)
-            elif 'goto' in self.current_line:
+            elif 'goto' in arg0:
                 self.set_command_type(C.GOTO)
-            elif 'function' in self.current_line:
+            elif 'function' in arg0:
                 self.set_command_type(C.FUNCTION)
-            elif 'return' in self.current_line:
+            elif 'return' in arg0:
                 self.set_command_type(C.RETURN)
-            elif 'call' in self.current_line:
+            elif 'call' in arg0:
                 self.set_command_type(C.CALL)
                 
             break  # Exit the loop after succesfully processing the command
@@ -78,10 +81,16 @@ class Parser:
             string (_str_): The command type to be set.
         """
         self.command_type = command_type
+    
+    def arg0(self):
+        space_index = self.current_line.find(' ')
+        if space_index == -1:
+            return self.current_line
+        return self.current_line[:space_index]
         
     def arg1(self):
         if self.command_type == C.ARITHMETIC:
-            return self.current_line
+            return self.arg0()
         elif self.command_type != C.RETURN:
             start_index = self.current_line.find(' ') + 1
             end_index = self.current_line[start_index:].find(' ') + start_index

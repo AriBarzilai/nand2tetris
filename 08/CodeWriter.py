@@ -114,6 +114,7 @@ class CodeWriter:
         self._write('D;JNE')
 
     def write_function(self, function_name: str, num_args: int):
+        if self._DEBUG_MODE: self._log("FUNCTION {0}: {1} ARGS".format(function_name, num_args))
         """Writes the assembly code for a function command, which initializes a function with the given name and number of arguments."""
         self._write('({})'.format(self._get_function_label(function_name, num_args)))
         for _ in range(num_args): # Initialize num_args local arguments to 0
@@ -121,9 +122,10 @@ class CodeWriter:
             self._push_D_to_stack()
             
     def write_function_call(self, function_label, num_args: int):
+        if self._DEBUG_MODE: self._log("CALL {0}: {1} ARGS".format(function_label, num_args))
         """Writes the assembly code for a function call command, which calls the function with the given name and number of arguments."""
         function_label = self._get_function_label(function_label, num_args)
-        return_label = function_label + '.RETURN' + str(self._call_count)
+        return_label = function_label + '.RETURN' + str(self._call_count) # saves a unique return address for each function call
         self._call_count += 1
 
         # push return-address
@@ -131,6 +133,7 @@ class CodeWriter:
         self._write('D=A')
         self._push_D_to_stack()
         
+        # push LCL, ARG, THIS, THAT to new function's stack 
         for address in ['LCL', 'ARG', 'THIS', 'THAT']:
             self._write("@" + address)
             self._write('D=M')
@@ -145,10 +148,45 @@ class CodeWriter:
         # sets ARG to SP - n - 5
         self._update_ARG(num_args)
         
-        # handles end of function call; jumps 
+        # handle end of function call
         self._write('@' + function_label)
         self._write('0;JMP')
         self._write('({})'.format(return_label))
+        
+    def write_return(self):
+        if self._DEBUG_MODE: self._log("RETURN")
+        
+        # Temporary pointers to keep track of relative LCL and return address
+        current_frame = 'R13'
+        return_address = 'R14'
+
+        # store LCL in our current frame pointer
+        self._write('@LCL')
+        self._write('D=M')
+        self._write('@' + current_frame)
+        self._write('M=D')
+
+        self._frame_var_to_stack(current_frame, return_address, 5)
+
+        # *ARG = pop()
+        self._pop_stack_to_D()
+        self._write('@ARG')
+        self._write('A=M')
+        self._write('M=D')
+
+        # SP = ARG+1
+        self._write('@ARG')
+        self._write('D=M')
+        self._write('@SP')
+        self._write('M=D+1')
+
+        for offset, address in enumerate(['THAT', 'THIS', 'ARG', 'LCL'], start=1):
+            self._frame_var_to_stack(current_frame, address, offset)
+
+        self._write('@' + return_address)
+        self._write('A=M')
+        self._write('0;JMP')
+
 
     def close(self):
         self._output_file.close()
@@ -220,8 +258,19 @@ class CodeWriter:
         
     def _get_function_label(self, function_name: str, num_args):
         """Returns the function name's corresponding label, in the format FILE_NAME.FUNCTION_NAME.NUM_ARGS. We include num_args to enable function overloading."""
-        return '{}.{}#{}ARGS'.format(self._file_name,function_name, num_args)
+        return '{}.{}.{}ARGS'.format(self._file_name,function_name, num_args)
     
     def _get_label(self, label: str):
         """Returns the corresponding label, in the format FILE_NAME.LABEL."""
         return '{}${}'.format(self._file_name,label)
+
+    def _frame_var_to_stack(self, current_frame: str, address: str, offset: int):
+        """sets the value of address: address = *(FRAME-offset)"""
+        self._write('@' + current_frame)
+        self._write('D=M') # Save start of frame
+        self._write('@' + str(offset))
+        self._write('D=D-A') # Adjust address
+        self._write('A=D') # Prepare to load value at address
+        self._write('D=M') # Store value
+        self._write('@' + address)
+        self._write('M=D') # Save value

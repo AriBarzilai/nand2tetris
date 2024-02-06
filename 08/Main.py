@@ -4,7 +4,7 @@ from Parser import COMMAND_TYPE as C
 import os
 import sys
 
-DEBUG_MODE = False # logs to output file additional information about the translation process if set to True.
+DEBUG_MODE = True # logs to output file additional information about the translation process if set to True.
 
 def main():
     if len(sys.argv) < 2:
@@ -57,9 +57,15 @@ def translate_file(file_path: str, code_writer : Code):
             elif parser.command_type == C.LABEL:
                 code_writer.write_label(parser.arg1())
             elif parser.command_type == C.IF:
-                pass
+                code_writer.write_if(parser.arg1())
             elif parser.command_type == C.GOTO:
                 code_writer.write_goto(parser.arg1())
+            elif parser.command_type == C.FUNCTION:
+                code_writer.write_function(parser.arg1(), int(parser.arg2()))
+            elif parser.command_type == C.RETURN:
+                code_writer.write_return()
+            elif parser.command_type == C.CALL:
+                code_writer.write_function_call(parser.arg1(), int(parser.arg2()))
             else:
                 continue
 
