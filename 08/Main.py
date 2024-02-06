@@ -15,7 +15,12 @@ def main():
     output_path = get_output_path(path)
     hasTranslated = False
     
-    code_writer = Code.CodeWriter(output_path, DEBUG_MODE)        
+    add_boostrap_code = False
+    if os.path.isdir(path): 
+        if os.path.isfile(os.path.join(path, 'Sys.vm')):
+            add_boostrap_code = True
+        
+    code_writer = Code.CodeWriter(output_path, add_boostrap_code, DEBUG_MODE)        
     if os.path.isdir(path):     
         print('translating the files in {}'.format(path))   
         for file in os.listdir(path):

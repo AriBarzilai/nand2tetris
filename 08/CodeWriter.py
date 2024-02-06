@@ -13,17 +13,21 @@ class CodeWriter:
         'static': 16,
     }
     
-    def __init__(self, output_path: str, DEBUG_MODE: bool = False):
+    def __init__(self, output_path: str, add_bootstrap: bool = False, DEBUG_MODE: bool = False):
         self._output_file = open(output_path, 'w')
         self._bool_count = 0 # Count of boolean comparisons so far; used for unique jump labels
         self._call_count = 0 # Count of function calls so far; used for unique jump labels to return address
         self._file_name = ''
         self._DEBUG_MODE = DEBUG_MODE
+        if add_bootstrap:
+            self.set_file_name('Sys.vm')
+            self._write_sys_init()
 
     def set_file_name(self, file_name: str):
         """Informs the code writer that the translation of a new VM file has started."""
-        self._file_name = file_name
-        if self._DEBUG_MODE: self._log('FILE {}:'.format(file_name))
+        if self._file_name != file_name:
+            self._file_name = file_name
+            if self._DEBUG_MODE: self._log('FILE {}:'.format(file_name))
 
     def write_arithmetic(self, operation: str):
         """Writes the assembly code for the given arithmetic operation to the top value(s) on the stack."""
@@ -109,6 +113,7 @@ class CodeWriter:
 
     def write_if(self, label: str):
         """Writes the assembly code for a conditional jump to the specified label in the current VM file."""
+        if self._DEBUG_MODE: self._log("IF-GOTO {0}".format(label))
         self._pop_stack_to_D()
         self._write('@{}'.format(self._get_label(label)))
         self._write('D;JNE')
@@ -274,3 +279,16 @@ class CodeWriter:
         self._write('D=M') # Store value
         self._write('@' + address)
         self._write('M=D') # Save value
+        
+    def _write_sys_init(self):
+        """Bootstrap code: This code should be placed at the beginning of the output file,
+        when translating a folder.\n
+        ASSUMPTION: there exists a file called Sys.vm, which contains the Sys.init function."""
+        if self._DEBUG_MODE: self._log("BOOTSTRAP CODE: CALL SYS.INIT")        
+        # Initialize SP to 256
+        self._write('@256')
+        self._write('D=A')
+        self._write('@SP')
+        self._write('M=D')
+        # Call Sys.init
+        self.write_function_call('Sys.init', 0)

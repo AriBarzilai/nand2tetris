@@ -60,7 +60,6 @@ class Parser:
                 self.set_command_type(C.ARITHMETIC)
             elif 'label' in arg0:
                 self.set_command_type(C.LABEL)
-                print(self.arg1())
             elif 'if-goto' in arg0:
                 self.set_command_type(C.IF)
             elif 'goto' in arg0:
@@ -83,22 +82,14 @@ class Parser:
         self.command_type = command_type
     
     def arg0(self):
-        space_index = self.current_line.find(' ')
-        if space_index == -1:
-            return self.current_line
-        return self.current_line[:space_index]
+        return self.current_line.split(' ')[0]
         
     def arg1(self):
         if self.command_type == C.ARITHMETIC:
             return self.arg0()
         elif self.command_type != C.RETURN:
-            start_index = self.current_line.find(' ') + 1
-            end_index = self.current_line[start_index:].find(' ') + start_index
-            if end_index == -1:
-                return self.current_line[start_index:]
-            return self.current_line[start_index:end_index]
+            return self.current_line.split(' ')[1]
         
     def arg2(self):
         if self.command_type != C.RETURN:
-            start_index = len(self.current_line) - self.current_line[::-1].find(' ')
-            return self.current_line[start_index:]        
+            return self.current_line.split(' ')[2]   
