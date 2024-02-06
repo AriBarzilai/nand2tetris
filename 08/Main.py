@@ -4,7 +4,7 @@ from Parser import COMMAND_TYPE as C
 import os
 import sys
 
-DEBUG_MODE = True # logs to output file additional information about the translation process if set to True.
+DEBUG_MODE = False # logs to output file additional information about the translation process if set to True.
 
 def main():
     if len(sys.argv) < 2:

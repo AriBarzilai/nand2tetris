@@ -15,7 +15,8 @@ class CodeWriter:
     
     def __init__(self, output_path: str, DEBUG_MODE: bool = False):
         self._output_file = open(output_path, 'w')
-        self._bool_count = 0 # Count of boolean comparisons
+        self._bool_count = 0 # Count of boolean comparisons so far; used for unique jump labels
+        self._call_count = 0 # Count of function calls so far; used for unique jump labels to return address
         self._file_name = ''
         self._DEBUG_MODE = DEBUG_MODE
 
@@ -96,18 +97,58 @@ class CodeWriter:
             self._write('M=D')
         else:
             raise ValueError('Invalid command: {0}'.format(command_type))
-        
+
     def write_label(self, label: str):
-        self._write('({fname}.{label})'.format(self._file_name, label))
-        
+        """Writes the assembly code to define a label in the current VM file."""
+        self._write('({})'.format(self._get_label(label)))
+
     def write_goto(self, label: str):
-        self._write('@{fname}.{label}'.format(self._file_name, label))
+        """Writes the assembly code for an unconditional jump (goto) to the specified label in the current VM file."""
+        self._write('@{}'.format(self._get_label(label)))
         self._write('0;JMP')
-    
+
     def write_if(self, label: str):
+        """Writes the assembly code for a conditional jump to the specified label in the current VM file."""
         self._pop_stack_to_D()
-        self._write('@{fname}.{label}'.format(self._file_name, label))
-        self._write('D;JNE') # if top of stack is not 0, the preceding arithmetic operation was true, and thus goto the label
+        self._write('@{}'.format(self._get_label(label)))
+        self._write('D;JNE')
+
+    def write_function(self, function_name: str, num_args: int):
+        """Writes the assembly code for a function command, which initializes a function with the given name and number of arguments."""
+        self._write('({})'.format(self._get_function_label(function_name, num_args)))
+        for _ in range(num_args): # Initialize num_args local arguments to 0
+            self._write('D=0')
+            self._push_D_to_stack()
+            
+    def write_function_call(self, function_label, num_args: int):
+        """Writes the assembly code for a function call command, which calls the function with the given name and number of arguments."""
+        function_label = self._get_function_label(function_label, num_args)
+        return_label = function_label + '.RETURN' + str(self._call_count)
+        self._call_count += 1
+
+        # push return-address
+        self._write('@' + return_label)
+        self._write('D=A')
+        self._push_D_to_stack()
+        
+        for address in ['LCL', 'ARG', 'THIS', 'THAT']:
+            self._write("@" + address)
+            self._write('D=M')
+            self._push_D_to_stack()
+
+        # sets LCL to new SP value
+        self._write('@SP')
+        self._write('D=M')
+        self._write('@LCL')
+        self._write('M=D')
+
+        # sets ARG to SP - n - 5
+        self._update_ARG(num_args)
+        
+        # handles end of function call; jumps 
+        self._write('@' + function_label)
+        self._write('0;JMP')
+        self._write('({})'.format(return_label))
 
     def close(self):
         self._output_file.close()
@@ -169,9 +210,18 @@ class CodeWriter:
         """Writes to file a common assembly operation: set A to the top of the stack"""
         self._write('@SP')
         self._write('A=M')
+    
+    def _update_ARG(self, num_args: int):
+        """Should be used when calling a VM function. Updates the ARG register to point to the first argument of the currently-called function."""
+        self._write('@' + str(num_args + 5))
+        self._write('D=D-A') # D = SP - (n + 5). SP stored in D by previous function, and n+5 is the number of arguments + SP, ARG, LCL, THIS, THAT
+        self._write('@ARG')
+        self._write('M=D')
         
-    def _write_function(self, function_name, arg_count):
-        self.write('({})'.format(function_name), code=False)
-        for _ in range(arg_count): # Initialize arg_count local arguments
-            self.write('D=0')
-            self.push_D_to_stack()
+    def _get_function_label(self, function_name: str, num_args):
+        """Returns the function name's corresponding label, in the format FILE_NAME.FUNCTION_NAME.NUM_ARGS. We include num_args to enable function overloading."""
+        return '{}.{}#{}ARGS'.format(self._file_name,function_name, num_args)
+    
+    def _get_label(self, label: str):
+        """Returns the corresponding label, in the format FILE_NAME.LABEL."""
+        return '{}${}'.format(self._file_name,label)
